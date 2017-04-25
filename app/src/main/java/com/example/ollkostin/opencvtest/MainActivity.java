@@ -11,9 +11,12 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -53,47 +56,30 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     };
 
     @Override
-    protected void onPause(){
+    protected void onPause() {
         super.onPause();
-        if(cameraView!=null){
+        if (cameraView != null) {
             cameraView.disableView();
         }
     }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         super.onDestroy();
-        if(cameraView!=null){
+        if (cameraView != null) {
             cameraView.disableView();
         }
     }
 
     @Override
-    protected void onResume(){
+    protected void onResume() {
         super.onResume();
-        if(OpenCVLoader.initDebug()){
-           try {
-               InputStream is = getResources().openRawResource(R.raw.haarcascade_eye);
-               File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-               cascadeFile = new File(cascadeDir, "haarcascade_eye.xml");
-               FileOutputStream os = new FileOutputStream(cascadeFile);
-
-               byte[] buffer = new byte[4096];
-               int bytesRead;
-               while ((bytesRead = is.read(buffer)) != -1) {
-                   os.write(buffer, 0, bytesRead);
-               }
-               is.close();
-               os.close();
-               eyeCascade = new CascadeClassifier(cascadeFile.getAbsolutePath());
-               mloaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
-               Log.i(TAG, "OpenCV OK");
-           } catch (IOException e){
-               Log.i(TAG,"Failed to load file");
-           }
+        if (OpenCVLoader.initDebug()) {
+            mloaderCallback.onManagerConnected(BaseLoaderCallback.SUCCESS);
+            Log.i(TAG, "OpenCV OK");
         } else {
-            Log.i(TAG,"OpenCV load failed");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_11,this,mloaderCallback);
+            Log.i(TAG, "OpenCV load failed");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mloaderCallback);
         }
     }
 
@@ -108,9 +94,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-        frame = new Mat(height,width, CvType.CV_8UC4);
-        eyeCascade = new CascadeClassifier();
-        grayFrame = new Mat(height,width,CvType.CV_8UC1);
+        frame = new Mat(height, width, CvType.CV_8UC4);
+        grayFrame = new Mat(height, width, CvType.CV_8UC1);
     }
 
     @Override
@@ -121,16 +106,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         frame = inputFrame.rgba();
-        /*Imgproc.cvtColor(frame, grayFrame, Imgproc.COLOR_RGB2GRAY);
-        Imgproc.equalizeHist(grayFrame, grayFrame);
-
-            MatOfRect eyes = new MatOfRect();
-            eyeCascade.detectMultiScale(grayFrame,eyes,1.1,2, Objdetect.CASCADE_SCALE_IMAGE,new Size(100,1000),new Size());
-            Rect[] facesArray = eyes.toArray();
-            for (Rect aFacesArray : facesArray)
-                rectangle(frame, aFacesArray.tl(), aFacesArray.br(), new Scalar(0, 255, 0, 255), 3);
-
-            */
+        Imgproc.cvtColor(frame,grayFrame,Imgproc.COLOR_BGR2GRAY);
+        MatOfPoint corners = new MatOfPoint();
+        Imgproc.goodFeaturesToTrack(grayFrame,corners,100,0.01,10);
+        Point[] cornersArr = corners.toArray();
+        for (int i=0;i<cornersArr.length;i++){
+            Point p = cornersArr[i];
+            Core.circle(frame,p,3,new Scalar(255),-1);
+        }
+        //Core.line(frame,new Point(0,0),new Point(150,150),new Scalar(255,255,255),10);
         return frame;
     }
 }
